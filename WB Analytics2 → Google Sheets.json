@@ -1,0 +1,687 @@
+{
+  "name": "WB Analytics2 → Google Sheets",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "db840d20-5051-41fe-9b31-a6fdec63d2aa",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        3552,
+        5936
+      ],
+      "notes": "Для теста: нажмите Execute workflow."
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7,
+              "triggerAtMinute": 5
+            }
+          ]
+        }
+      },
+      "id": "81629c3e-b674-4212-8386-b46c7a7a860b",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        3552,
+        5760
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const yesterday = DateTime.now().setZone('Europe/Moscow').minus({ days: 1 });\nconst dateStr = yesterday.toFormat('yyyy-MM-dd');\nconst [year, month, day] = dateStr.split('-').map(Number);\nconst dateFromRfc = `${dateStr}T00:00:00%2B03:00`;\nconst dateToRfc = `${dateStr}T23:59:59%2B03:00`;\nconst pastDate = yesterday.minus({ days: 7 }).toFormat('yyyy-MM-dd');\nconst stocksDateFrom = yesterday.minus({ days: 90 }).toFormat('yyyy-MM-dd');\n\nreturn [{\n  json: {\n    date_from: dateStr,\n    date_to: dateStr,\n    date_from_rfc: dateFromRfc,\n    date_to_rfc: dateToRfc,\n    past_date: pastDate,\n    stocks_date_from: stocksDateFrom,\n    day,\n    month,\n    year,\n    date_display: yesterday.toFormat('dd.MM')\n  }\n}];"
+      },
+      "id": "fff8e683-89fe-4116-a6f2-7e5964cc5a4f",
+      "name": "Code Dates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3792,
+        5856
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1pXA81cORHIfhWvWc8GLOfLLlhOlsZF3EuGoUvqZgR90/values/'Новинки_ВБ_суперсейл_февраль_26 (копия)'!A2:G466",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "id": "44e072d5-35ff-4d22-b8d7-9a4760bb1907",
+      "name": "Sheets Read Cards SuperSale",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4000,
+        5696
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lKUAphbkTpmjb35D",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1pXA81cORHIfhWvWc8GLOfLLlhOlsZF3EuGoUvqZgR90/values/'Новинки_ВБ_фитсмайл_февраль_26 (копия)'!A87:G466",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "options": {}
+      },
+      "id": "a0d367ba-56fd-4610-aab5-6d65991e0a47",
+      "name": "Sheets Read Cards FitSmile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4000,
+        6000
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lKUAphbkTpmjb35D",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first()?.json || {};\nconst values = resp.values || [];\n\nconst cards = [];\n// Лист \"Новинки_ВБ_суперсейл_февраль_26 (копия)\": данные начинаются со 2-й строки\nconst firstRow = 2;\n\nfor (let i = 0; i < values.length; i++) {\n  const row = values[i];\n  if (!row) continue;\n\n  const nmIdRaw = row[0];\n  if (nmIdRaw === undefined || nmIdRaw === null || nmIdRaw === '') continue;\n\n  const nmId = String(nmIdRaw).trim();\n  if (!nmId) continue;\n\n  const article = row[1] || '';\n  const name = row[2] || '';\n  const link = row[3] || '';\n  const image = row[4] || '';\n\n  const rowStart = firstRow + i;\n\n  cards.push({\n    nmId,\n    rowStart,\n    article,\n    name,\n    link,\n    image\n  });\n}\n\nconst nmIds = cards.map(c => Number(c.nmId) || Number(c.nmId.replace(/\\D/g, '')) || c.nmId);\n\nreturn [{ json: { cards, nmIds } }];"
+      },
+      "id": "a4806d39-9cac-4f46-a028-cda141adca40",
+      "name": "Code Parse Cards SuperSale",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4224,
+        5696
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $input.first()?.json || {};\nconst values = resp.values || [];\n\nconst cards = [];\n// Лист \"Новинки_ВБ_фитсмайл_февраль_26 (копия)\": данные начинаются с 87-й строки\nconst firstRow = 87;\n\nfor (let i = 0; i < values.length; i++) {\n  const row = values[i];\n  if (!row) continue;\n\n  const nmIdRaw = row[0];\n  if (nmIdRaw === undefined || nmIdRaw === null || nmIdRaw === '') continue;\n\n  const nmId = String(nmIdRaw).trim();\n  if (!nmId) continue;\n\n  const article = row[1] || '';\n  const name = row[2] || '';\n  const link = row[3] || '';\n  const image = row[4] || '';\n\n  const rowStart = firstRow + i;\n\n  cards.push({\n    nmId,\n    rowStart,\n    article,\n    name,\n    link,\n    image\n  });\n}\n\nconst nmIds = cards.map(c => Number(c.nmId) || Number(c.nmId.replace(/\\D/g, '')) || c.nmId);\n\nreturn [{ json: { cards, nmIds } }];"
+      },
+      "id": "5bc78960-66c0-41a9-b9b5-04477d258455",
+      "name": "Code Parse Cards FitSmile",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4224,
+        6000
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://seller-analytics-api.wildberries.ru/api/analytics/v3/sales-funnel/products",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "WB_API_TOKEN_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({\n  selectedPeriod: { start: $('Code Dates').first().json.date_from, end: $('Code Dates').first().json.date_to },\n  pastPeriod: { start: $('Code Dates').first().json.past_date, end: $('Code Dates').first().json.past_date },\n  nmIds: ($('Code Parse Cards SuperSale').first().json.nmIds || []).map(Number),\n  brandNames: [],\n  subjectIds: [],\n  tagIds: [],\n  skipDeletedNm: true,\n  orderBy: { field: 'orderSum', mode: 'desc' },\n  limit: 1000,\n  offset: 0\n}) }}",
+        "options": {}
+      },
+      "id": "44f323ae-4a12-49df-9fc2-30e0bc2c3977",
+      "name": "Analytics SuperSale",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4448,
+        5696
+      ],
+      "settings": {
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 10000
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dates = $('Code Dates').first().json || {};\nconst dateFrom = dates.date_from || '';\nconst dateTo = dates.date_to || '';\nconst nmIds = ($('Code Parse Cards SuperSale').first().json?.nmIds || []).map(Number).filter(Boolean);\nconst token = 'WB_API_TOKEN_PLACEHOLDER';\nconst headers = { Authorization: token };\n\nconst positionByNmId = {};\n\ntry {\n  const countRes = await this.helpers.httpRequest({\n    method: 'GET',\n    url: 'https://advert-api.wildberries.ru/adv/v1/promotion/count',\n    headers,\n    json: true\n  });\n  const advertIds = [];\n  for (const g of (countRes?.adverts || [])) {\n    for (const a of (g?.advert_list || g?.advertList || [])) {\n      if (a?.advertId ?? a?.advert_id) advertIds.push(a.advertId ?? a.advert_id);\n    }\n  }\n  if (advertIds.length > 0) {\n    for (let i = 0; i < advertIds.length; i += 50) {\n      const batch = advertIds.slice(i, i + 50);\n      const fullRes = await this.helpers.httpRequest({\n        method: 'GET',\n        url: 'https://advert-api.wildberries.ru/adv/v3/fullstats',\n        qs: { ids: batch.join(','), beginDate: dateFrom, endDate: dateTo },\n        headers,\n        json: true\n      });\n      for (const camp of (fullRes || [])) {\n        for (const bs of (camp?.boosterStats || [])) {\n          const nm = bs?.nm ?? bs?.nmId;\n          if (nm == null) continue;\n          const pos = bs?.avg_position ?? bs?.avgPosition;\n          if (pos == null) continue;\n          const key = String(nm);\n          if (!(key in positionByNmId) || positionByNmId[key] > pos) positionByNmId[key] = pos;\n        }\n      }\n      if (i + 50 < advertIds.length) await new Promise(r => setTimeout(r, 7000));\n    }\n  }\n  if (Object.keys(positionByNmId).length === 0 && advertIds.length > 0 && nmIds.length > 0) {\n    const items = [];\n    for (const advId of advertIds) {\n      for (const nmId of nmIds) items.push({ advert_id: advId, nm_id: nmId });\n    }\n    for (let j = 0; j < items.length; j += 100) {\n      const chunk = items.slice(j, j + 100);\n      try {\n        const nrRes = await this.helpers.httpRequest({\n          method: 'POST',\n          url: 'https://advert-api.wildberries.ru/adv/v0/normquery/stats',\n          headers: { ...headers, 'Content-Type': 'application/json' },\n          body: { from: dateFrom, to: dateTo, items: chunk },\n          json: true\n        });\n        for (const s of (nrRes?.stats || [])) {\n          const nm = s?.nm_id ?? s?.nmId;\n          if (nm == null) continue;\n          for (const st of (s?.stats || [])) {\n            const pos = st?.avg_pos ?? st?.avgPos;\n            if (pos == null) continue;\n            const key = String(nm);\n            if (!(key in positionByNmId) || positionByNmId[key] > pos) positionByNmId[key] = pos;\n          }\n        }\n      } catch (_) {}\n      if (j + 100 < items.length) await new Promise(r => setTimeout(r, 7000));\n    }\n  }\n} catch (e) {}\n\nif (Object.keys(positionByNmId).length === 0 && nmIds.length > 0) {\n  const trySr = async (df, dt, pd) => {\n    const res = await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'https://seller-analytics-api.wildberries.ru/api/v2/search-report/table/details',\n      headers: { ...headers, 'Content-Type': 'application/json' },\n      body: {\n        currentPeriod: { start: df, end: dt },\n        pastPeriod: { start: pd || df, end: pd || df },\n        nmIds,\n        positionCluster: 'all',\n        includeSubstitutedSKUs: true,\n        includeSearchTexts: true,\n        orderBy: { field: 'avgPosition', mode: 'asc' },\n        limit: 150,\n        offset: 0\n      },\n      json: true\n    });\n    for (const p of (res?.data?.products || [])) {\n      const pos = p?.avgPosition?.current;\n      if (pos != null) positionByNmId[String(p.nmId)] = pos;\n    }\n  };\n  try {\n    await trySr(dateFrom, dateTo, dates.past_date);\n  } catch (e) {\n    const msg = (e?.message || e?.responseBody || JSON.stringify(e || '')).toLowerCase();\n    if (msg.includes('year ago') && dateFrom) {\n      const [y,m,d] = dateFrom.split('-');\n      const df2 = `${+y+1}-${m}-${d}`;\n      const pd = (dates.past_date || dateFrom).split('-');\n      const pd2 = `${+pd[0]+1}-${pd[1]}-${pd[2]}`;\n      try { await trySr(df2, df2, pd2); } catch (_) {}\n    }\n  }\n}\n\nreturn [{ json: { positionByNmId } }];"
+      },
+      "id": "848247b0-5493-4df1-9c95-2c04c26f5504",
+      "name": "Promo Position SuperSale",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4928,
+        5760
+      ],
+      "notes": "Рекламная позиция из Advert API (раздел Продвижение). Токен тот же."
+    },
+    {
+      "parameters": {
+        "url": "https://statistics-api.wildberries.ru/api/v1/supplier/stocks",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "dateFrom",
+              "value": "={{ $('Code Dates').first().json.stocks_date_from }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "WB_API_TOKEN_PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d4242e62-106f-4e1c-bed5-6521c30a4781",
+      "name": "Stocks SuperSale",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4928,
+        5600
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://statistics-api.wildberries.ru/api/v1/supplier/stocks",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "dateFrom",
+              "value": "={{ $('Code Dates').first().json.stocks_date_from }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "WB_API_TOKEN_PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0e063063-026b-4ca2-8eeb-f1175f68d70f",
+      "name": "Stocks FitSmile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4928,
+        5920
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const dates = $('Code Dates').first().json || {};\nconst dateFrom = dates.date_from || '';\nconst dateTo = dates.date_to || '';\nconst nmIds = ($('Code Parse Cards FitSmile').first().json?.nmIds || []).map(Number).filter(Boolean);\nconst token = 'WB_API_TOKEN_PLACEHOLDER';\nconst headers = { Authorization: token };\n\nconst positionByNmId = {};\n\ntry {\n  const countRes = await this.helpers.httpRequest({\n    method: 'GET',\n    url: 'https://advert-api.wildberries.ru/adv/v1/promotion/count',\n    headers,\n    json: true\n  });\n  const advertIds = [];\n  for (const g of (countRes?.adverts || [])) {\n    for (const a of (g?.advert_list || g?.advertList || [])) {\n      if (a?.advertId ?? a?.advert_id) advertIds.push(a.advertId ?? a.advert_id);\n    }\n  }\n  if (advertIds.length > 0) {\n    for (let i = 0; i < advertIds.length; i += 50) {\n      const batch = advertIds.slice(i, i + 50);\n      const fullRes = await this.helpers.httpRequest({\n        method: 'GET',\n        url: 'https://advert-api.wildberries.ru/adv/v3/fullstats',\n        qs: { ids: batch.join(','), beginDate: dateFrom, endDate: dateTo },\n        headers,\n        json: true\n      });\n      for (const camp of (fullRes || [])) {\n        for (const bs of (camp?.boosterStats || [])) {\n          const nm = bs?.nm ?? bs?.nmId;\n          if (nm == null) continue;\n          const pos = bs?.avg_position ?? bs?.avgPosition;\n          if (pos == null) continue;\n          const key = String(nm);\n          if (!(key in positionByNmId) || positionByNmId[key] > pos) positionByNmId[key] = pos;\n        }\n      }\n      if (i + 50 < advertIds.length) await new Promise(r => setTimeout(r, 7000));\n    }\n  }\n  if (Object.keys(positionByNmId).length === 0 && advertIds.length > 0 && nmIds.length > 0) {\n    const items = [];\n    for (const advId of advertIds) {\n      for (const nmId of nmIds) items.push({ advert_id: advId, nm_id: nmId });\n    }\n    for (let j = 0; j < items.length; j += 100) {\n      const chunk = items.slice(j, j + 100);\n      try {\n        const nrRes = await this.helpers.httpRequest({\n          method: 'POST',\n          url: 'https://advert-api.wildberries.ru/adv/v0/normquery/stats',\n          headers: { ...headers, 'Content-Type': 'application/json' },\n          body: { from: dateFrom, to: dateTo, items: chunk },\n          json: true\n        });\n        for (const s of (nrRes?.stats || [])) {\n          const nm = s?.nm_id ?? s?.nmId;\n          if (nm == null) continue;\n          for (const st of (s?.stats || [])) {\n            const pos = st?.avg_pos ?? st?.avgPos;\n            if (pos == null) continue;\n            const key = String(nm);\n            if (!(key in positionByNmId) || positionByNmId[key] > pos) positionByNmId[key] = pos;\n          }\n        }\n      } catch (_) {}\n      if (j + 100 < items.length) await new Promise(r => setTimeout(r, 7000));\n    }\n  }\n} catch (e) {}\n\nif (Object.keys(positionByNmId).length === 0 && nmIds.length > 0) {\n  const trySr = async (df, dt, pd) => {\n    const res = await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'https://seller-analytics-api.wildberries.ru/api/v2/search-report/table/details',\n      headers: { ...headers, 'Content-Type': 'application/json' },\n      body: {\n        currentPeriod: { start: df, end: dt },\n        pastPeriod: { start: pd || df, end: pd || df },\n        nmIds,\n        positionCluster: 'all',\n        includeSubstitutedSKUs: true,\n        includeSearchTexts: true,\n        orderBy: { field: 'avgPosition', mode: 'asc' },\n        limit: 150,\n        offset: 0\n      },\n      json: true\n    });\n    for (const p of (res?.data?.products || [])) {\n      const pos = p?.avgPosition?.current;\n      if (pos != null) positionByNmId[String(p.nmId)] = pos;\n    }\n  };\n  try {\n    await trySr(dateFrom, dateTo, dates.past_date);\n  } catch (e) {\n    const msg = (e?.message || e?.responseBody || JSON.stringify(e || '')).toLowerCase();\n    if (msg.includes('year ago') && dateFrom) {\n      const [y,m,d] = dateFrom.split('-');\n      const df2 = `${+y+1}-${m}-${d}`;\n      const pd = (dates.past_date || dateFrom).split('-');\n      const pd2 = `${+pd[0]+1}-${pd[1]}-${pd[2]}`;\n      try { await trySr(df2, df2, pd2); } catch (_) {}\n    }\n  }\n}\n\nreturn [{ json: { positionByNmId } }];"
+      },
+      "id": "ec8865ab-6cab-4585-a83d-b17188a655a8",
+      "name": "Promo Position FitSmile",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4928,
+        6096
+      ],
+      "notes": "Рекламная позиция из Advert API (раздел Продвижение). Токен тот же."
+    },
+    {
+      "parameters": {},
+      "id": "6e78cc48-9a35-4d81-a7b4-6567db84107b",
+      "name": "Merge Before Merge SuperSale",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        5184,
+        5696
+      ],
+      "notes": "Ждёт Stocks + Promo Position"
+    },
+    {
+      "parameters": {},
+      "id": "7d75d00c-ac39-40f4-b77f-6133252b2e22",
+      "name": "Merge Before Merge FitSmile",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        5184,
+        6000
+      ],
+      "notes": "Ждёт Stocks + Promo Position"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://seller-analytics-api.wildberries.ru/api/analytics/v3/sales-funnel/products",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "WB_API_TOKEN_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({\n  selectedPeriod: { start: $('Code Dates').first().json.date_from, end: $('Code Dates').first().json.date_to },\n  pastPeriod: { start: $('Code Dates').first().json.past_date, end: $('Code Dates').first().json.past_date },\n  nmIds: ($('Code Parse Cards FitSmile').first().json.nmIds || []).map(Number),\n  brandNames: [],\n  subjectIds: [],\n  tagIds: [],\n  skipDeletedNm: true,\n  orderBy: { field: 'orderSum', mode: 'desc' },\n  limit: 1000,\n  offset: 0\n}) }}",
+        "options": {}
+      },
+      "id": "967f6666-5449-4b67-83de-181b3de4728a",
+      "name": "Analytics FitSmile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4448,
+        6000
+      ],
+      "settings": {
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 10000
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const nmIds = $('Code Parse Cards SuperSale').first().json.nmIds || [];\n\nconst fbCounts = {};\nconst qCounts = {};\n\nconst token = 'WB_API_TOKEN_PLACEHOLDER';\nconst headers = { Authorization: token };\n\nasync function contentApi(body) {\n  return this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://content-api.wildberries.ru/content/v2/get/cards/list',\n    headers: { ...headers, 'Content-Type': 'application/json' },\n    body,\n    json: true\n  });\n}\n\nasync function fetchFeedbacks(nmId) {\n  let total = 0;\n  try {\n    const resAnswered = await this.helpers.httpRequest({\n      method: 'GET',\n      url: 'https://feedbacks-api.wildberries.ru/api/v1/feedbacks',\n      qs: { nmId, take: 5000, skip: 0, order: 'dateDesc', isAnswered: true },\n      headers,\n      json: true\n    });\n    total += (resAnswered?.data?.feedbacks || []).length;\n    await new Promise(r => setTimeout(r, 350));\n    const resUnanswered = await this.helpers.httpRequest({\n      method: 'GET',\n      url: 'https://feedbacks-api.wildberries.ru/api/v1/feedbacks',\n      qs: { nmId, take: 5000, skip: 0, order: 'dateDesc', isAnswered: false },\n      headers,\n      json: true\n    });\n    total += (resUnanswered?.data?.feedbacks || []).length;\n    fbCounts[String(nmId)] = total;\n  } catch (e) {\n    fbCounts[String(nmId)] = fbCounts[String(nmId)] || 0;\n  }\n}\n\nconst imtIdToNmIds = {};\nconst imtIdQuestionsCache = {};\n\nfor (const raw of nmIds) {\n  const nmId = Number(raw) || raw;\n  await fetchFeedbacks(nmId);\n  try {\n    const cardRes = await contentApi.call(this, { settings: { cursor: { limit: 100 }, filter: { textSearch: String(nmId), withPhoto: -1 } } });\n    const card = (cardRes?.cards || [])[0];\n    const imtId = card?.imtID;\n    if (!imtId) { qCounts[String(nmId)] = 0; continue; }\n    if (!imtIdToNmIds[imtId]) {\n      const groupRes = await contentApi.call(this, { settings: { cursor: { limit: 100 }, filter: { imtID: imtId, withPhoto: -1 } } });\n      imtIdToNmIds[imtId] = (groupRes?.cards || []).map(c => c.nmID).filter(Boolean);\n      await new Promise(r => setTimeout(r, 400));\n    }\n    if (!(imtId in imtIdQuestionsCache)) {\n      let sum = 0;\n      for (const nid of imtIdToNmIds[imtId]) {\n        try {\n          const r = await this.helpers.httpRequest({ method: 'GET', url: 'https://feedbacks-api.wildberries.ru/api/v1/questions/count', qs: { nmId: nid }, headers, json: true });\n          sum += Number(r?.data) ?? 0;\n          await new Promise(r2 => setTimeout(r2, 350));\n        } catch (_) {}\n      }\n      imtIdQuestionsCache[imtId] = sum;\n    }\n    qCounts[String(nmId)] = imtIdQuestionsCache[imtId];\n  } catch (e) {\n    try {\n      const r = await this.helpers.httpRequest({ method: 'GET', url: 'https://feedbacks-api.wildberries.ru/api/v1/questions/count', qs: { nmId }, headers, json: true });\n      qCounts[String(nmId)] = Number(r?.data) ?? 0;\n    } catch (_) { qCounts[String(nmId)] = 0; }\n  }\n}\n\nreturn [{ json: { fbCounts, qCounts } }];"
+      },
+      "id": "d9d60071-de81-4d72-8f76-a1ed7467e248",
+      "name": "Code Feedbacks & Questions SuperSale",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4656,
+        5696
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const nmIds = $('Code Parse Cards FitSmile').first().json.nmIds || [];\n\nconst fbCounts = {};\nconst qCounts = {};\n\nconst token = 'WB_API_TOKEN_PLACEHOLDER';\nconst headers = { Authorization: token };\n\nasync function contentApi(body) {\n  return this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://content-api.wildberries.ru/content/v2/get/cards/list',\n    headers: { ...headers, 'Content-Type': 'application/json' },\n    body,\n    json: true\n  });\n}\n\nasync function fetchFeedbacks(nmId) {\n  let total = 0;\n  try {\n    const resAnswered = await this.helpers.httpRequest({\n      method: 'GET',\n      url: 'https://feedbacks-api.wildberries.ru/api/v1/feedbacks',\n      qs: { nmId, take: 5000, skip: 0, order: 'dateDesc', isAnswered: true },\n      headers,\n      json: true\n    });\n    total += (resAnswered?.data?.feedbacks || []).length;\n    await new Promise(r => setTimeout(r, 350));\n    const resUnanswered = await this.helpers.httpRequest({\n      method: 'GET',\n      url: 'https://feedbacks-api.wildberries.ru/api/v1/feedbacks',\n      qs: { nmId, take: 5000, skip: 0, order: 'dateDesc', isAnswered: false },\n      headers,\n      json: true\n    });\n    total += (resUnanswered?.data?.feedbacks || []).length;\n    fbCounts[String(nmId)] = total;\n  } catch (e) {\n    fbCounts[String(nmId)] = fbCounts[String(nmId)] || 0;\n  }\n}\n\nconst imtIdToNmIds = {};\nconst imtIdQuestionsCache = {};\n\nfor (const raw of nmIds) {\n  const nmId = Number(raw) || raw;\n  await fetchFeedbacks(nmId);\n  try {\n    const cardRes = await contentApi.call(this, { settings: { cursor: { limit: 100 }, filter: { textSearch: String(nmId), withPhoto: -1 } } });\n    const card = (cardRes?.cards || [])[0];\n    const imtId = card?.imtID;\n    if (!imtId) { qCounts[String(nmId)] = 0; continue; }\n    if (!imtIdToNmIds[imtId]) {\n      const groupRes = await contentApi.call(this, { settings: { cursor: { limit: 100 }, filter: { imtID: imtId, withPhoto: -1 } } });\n      imtIdToNmIds[imtId] = (groupRes?.cards || []).map(c => c.nmID).filter(Boolean);\n      await new Promise(r => setTimeout(r, 400));\n    }\n    if (!(imtId in imtIdQuestionsCache)) {\n      let sum = 0;\n      for (const nid of imtIdToNmIds[imtId]) {\n        try {\n          const r = await this.helpers.httpRequest({ method: 'GET', url: 'https://feedbacks-api.wildberries.ru/api/v1/questions/count', qs: { nmId: nid }, headers, json: true });\n          sum += Number(r?.data) ?? 0;\n          await new Promise(r2 => setTimeout(r2, 350));\n        } catch (_) {}\n      }\n      imtIdQuestionsCache[imtId] = sum;\n    }\n    qCounts[String(nmId)] = imtIdQuestionsCache[imtId];\n  } catch (e) {\n    try {\n      const r = await this.helpers.httpRequest({ method: 'GET', url: 'https://feedbacks-api.wildberries.ru/api/v1/questions/count', qs: { nmId }, headers, json: true });\n      qCounts[String(nmId)] = Number(r?.data) ?? 0;\n    } catch (_) { qCounts[String(nmId)] = 0; }\n  }\n}\n\nreturn [{ json: { fbCounts, qCounts } }];"
+      },
+      "id": "2baba74d-cf7d-4881-bc8e-2e3815c5d7f8",
+      "name": "Code Feedbacks & Questions FitSmile",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4656,
+        6000
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function buildAnalyticsMap(resp) {\n  const out = new Map();\n  const root = resp || {};\n  const products = root.data?.products || root.products || [];\n  for (const item of products) {\n    const product = item.product || {};\n    const statRoot = item.statistic || {};\n    const stat = statRoot.selected || statRoot.current || statRoot || {};\n    const nmId = String(product.nmId ?? item.nmId ?? '').trim();\n    if (!nmId) continue;\n    const stocks = product.stocks || {};\n    const stockFromAnalytics = Number(stocks.wb) || 0;\n    out.set(nmId, {\n      orderSum: Number(stat.orderSum) || 0,\n      orderCount: Number(stat.orderCount) || 0,\n      cartCount: Number(stat.cartCount) || 0,\n      openCount: Number(stat.openCount) || 0,\n      stockFromAnalytics\n    });\n  }\n  return out;\n}\n\nfunction buildStockMap(stocksItems) {\n  const map = new Map();\n  for (const item of stocksItems) {\n    let data = item?.json ?? item?.body ?? item;\n    if (typeof data === 'string') try { data = JSON.parse(data); } catch (_) { data = null; }\n    if (data && typeof data === 'object' && !Array.isArray(data)) {\n      data = data.data ?? data.result ?? data.items ?? data.stocks ?? [data];\n    }\n    const rows = Array.isArray(data) ? data : (data && typeof data === 'object' ? [data] : []);\n    for (const row of rows) {\n      const nmId = String(row?.nmId ?? row?.nm_id ?? '').trim();\n      if (!nmId) continue;\n      const q = Number(row.quantity ?? row.quantityFull ?? 0) || Number(row.quantityFull ?? 0) || 0;\n      map.set(nmId, (map.get(nmId) || 0) + q);\n    }\n  }\n  return map;\n}\n\nconst cardsData = $('Code Parse Cards SuperSale').first().json || {};\nconst cards = cardsData.cards || [];\nconst analyticsResp = $('Analytics SuperSale').first().json || {};\nconst fq = $('Code Feedbacks & Questions SuperSale').first().json || {};\nconst fbCounts = fq.fbCounts || {};\nconst qCounts = fq.qCounts || {};\n\nconst positionByNmId = {};\ntry {\n  const promoResp = $('Promo Position SuperSale').first().json || {};\n  Object.assign(positionByNmId, promoResp.positionByNmId || {});\n} catch (e) {}\n\nlet stockMap = new Map();\ntry {\n  const stocksItems = $('Stocks SuperSale').all();\n  stockMap = buildStockMap(stocksItems);\n} catch (e) {}\n\nconst analyticsMap = buildAnalyticsMap(analyticsResp);\n\nconst items = [];\nfor (const card of cards) {\n  const nmIdKey = String(card.nmId ?? '').trim();\n  const a = analyticsMap.get(nmIdKey) || {};\n  const stockFromStats = stockMap.get(nmIdKey) ?? stockMap.get(String(Number(nmIdKey))) ?? null;\n  const stock = stockFromStats !== null ? stockFromStats : (a.stockFromAnalytics ?? 0);\n  const metrics = {\n    orderSum: a.orderSum || 0,\n    orderCount: a.orderCount || 0,\n    cartCount: a.cartCount || 0,\n    openCount: a.openCount || 0,\n    stock,\n    feedbacksCount: fbCounts[nmIdKey] ?? 0,\n    questionsCount: qCounts[nmIdKey] ?? 0,\n    searchPosition: positionByNmId[nmIdKey] ?? positionByNmId[String(Number(nmIdKey))] ?? null\n  };\n  items.push({ json: {\n    sheet: 'Новинки_ВБ_суперсейл_февраль_26 (копия)',\n    nmId: nmIdKey,\n    rowStart: card.rowStart,\n    metrics\n  }});\n}\n\nreturn items;"
+      },
+      "id": "36444bd7-fb49-4c7b-b99b-cbc7c89d95ac",
+      "name": "Code Merge Metrics SuperSale",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5376,
+        5696
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function buildAnalyticsMap(resp) {\n  const out = new Map();\n  const root = resp || {};\n  const products = root.data?.products || root.products || [];\n  for (const item of products) {\n    const product = item.product || {};\n    const statRoot = item.statistic || {};\n    const stat = statRoot.selected || statRoot.current || statRoot || {};\n    const nmId = String(product.nmId ?? item.nmId ?? '').trim();\n    if (!nmId) continue;\n    const stocks = product.stocks || {};\n    const stockFromAnalytics = Number(stocks.wb) || 0;\n    out.set(nmId, {\n      orderSum: Number(stat.orderSum) || 0,\n      orderCount: Number(stat.orderCount) || 0,\n      cartCount: Number(stat.cartCount) || 0,\n      openCount: Number(stat.openCount) || 0,\n      stockFromAnalytics\n    });\n  }\n  return out;\n}\n\nfunction buildStockMap(stocksItems) {\n  const map = new Map();\n  for (const item of stocksItems) {\n    let data = item?.json ?? item?.body ?? item;\n    if (typeof data === 'string') try { data = JSON.parse(data); } catch (_) { data = null; }\n    if (data && typeof data === 'object' && !Array.isArray(data)) {\n      data = data.data ?? data.result ?? data.items ?? data.stocks ?? [data];\n    }\n    const rows = Array.isArray(data) ? data : (data && typeof data === 'object' ? [data] : []);\n    for (const row of rows) {\n      const nmId = String(row?.nmId ?? row?.nm_id ?? '').trim();\n      if (!nmId) continue;\n      const q = Number(row.quantity ?? row.quantityFull ?? 0) || Number(row.quantityFull ?? 0) || 0;\n      map.set(nmId, (map.get(nmId) || 0) + q);\n    }\n  }\n  return map;\n}\n\nconst cardsData = $('Code Parse Cards FitSmile').first().json || {};\nconst cards = cardsData.cards || [];\nconst analyticsResp = $('Analytics FitSmile').first().json || {};\nconst fq = $('Code Feedbacks & Questions FitSmile').first().json || {};\nconst fbCounts = fq.fbCounts || {};\nconst qCounts = fq.qCounts || {};\n\nconst positionByNmId = {};\ntry {\n  const promoResp = $('Promo Position FitSmile').first().json || {};\n  Object.assign(positionByNmId, promoResp.positionByNmId || {});\n} catch (e) {}\n\nlet stockMap = new Map();\ntry {\n  const stocksItems = $('Stocks FitSmile').all();\n  stockMap = buildStockMap(stocksItems);\n} catch (e) {}\n\nconst analyticsMap = buildAnalyticsMap(analyticsResp);\n\nconst items = [];\nfor (const card of cards) {\n  const nmIdKey = String(card.nmId ?? '').trim();\n  const a = analyticsMap.get(nmIdKey) || {};\n  const stockFromStats = stockMap.get(nmIdKey) ?? stockMap.get(String(Number(nmIdKey))) ?? null;\n  const stock = stockFromStats !== null ? stockFromStats : (a.stockFromAnalytics ?? 0);\n  const metrics = {\n    orderSum: a.orderSum || 0,\n    orderCount: a.orderCount || 0,\n    cartCount: a.cartCount || 0,\n    openCount: a.openCount || 0,\n    stock,\n    feedbacksCount: fbCounts[nmIdKey] ?? 0,\n    questionsCount: qCounts[nmIdKey] ?? 0,\n    searchPosition: positionByNmId[nmIdKey] ?? positionByNmId[String(Number(nmIdKey))] ?? null\n  };\n  items.push({ json: {\n    sheet: 'Новинки_ВБ_фитсмайл_февраль_26 (копия)',\n    nmId: nmIdKey,\n    rowStart: card.rowStart,\n    metrics\n  }});\n}\n\nreturn items;"
+      },
+      "id": "436b7a50-2d09-46e5-b1c4-e375509e9e3c",
+      "name": "Code Merge Metrics FitSmile",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5376,
+        6000
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "1254bcb6-d1f5-4220-bd03-8eb0269a97f8",
+      "name": "Merge Metrics Both",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        5632,
+        5856
+      ],
+      "notes": "Ждёт Code Merge Metrics SuperSale + FitSmile"
+    },
+    {
+      "parameters": {
+        "jsCode": "function colLetter(index) {\n  let letter = '';\n  let n = index;\n  while (n >= 0) {\n    letter = String.fromCharCode((n % 26) + 65) + letter;\n    n = Math.floor(n / 26) - 1;\n  }\n  return letter;\n}\n\n// Merge отдаёт все items от SuperSale + FitSmile\nconst items = $input.all();\nconst dates = $('Code Dates').first().json;\n// day = день месяца для вчерашней даты (25, если сегодня 26)\nconst day = Number(dates.day) || 1;\n// В таблице 1/2 находится в колонке G, значит базовый индекс = 6 (0-based)\nconst colIndex = 6 + (day - 1);\nconst col = colLetter(colIndex);\n\nconst data = [];\n\nfor (const item of items) {\n  const j = item.json || {};\n  const sheet = j.sheet;\n  const rowStart = Number(j.rowStart);\n  const m = j.metrics || {};\n  if (!sheet || !rowStart) continue;\n\n  const add = (offset, value) => {\n    if (value === undefined || value === null || value === '') return;\n    const row = rowStart + offset;\n    data.push({\n      range: `'${sheet}'!${col}${row}`,\n      values: [[value]]\n    });\n  };\n\n  add(0, m.orderSum);\n  add(2, m.orderCount);\n  add(3, m.cartCount);\n  add(4, m.openCount);\n  add(5, m.stock);\n  add(7, m.feedbacksCount);\n  add(8, m.questionsCount);\n  add(9, m.searchPosition);\n}\n\nreturn [{ json: { data } }];"
+      },
+      "id": "354c55b7-dc13-45e4-8fee-87f8387b510b",
+      "name": "Code Prepare Write",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5824,
+        5856
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1pXA81cORHIfhWvWc8GLOfLLlhOlsZF3EuGoUvqZgR90/values:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ valueInputOption: 'USER_ENTERED', data: $json.data }) }}",
+        "options": {}
+      },
+      "id": "3f8069f4-ecbb-426c-8caf-97e5a075ea13",
+      "name": "Sheets Write Metrics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6000,
+        5856
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lKUAphbkTpmjb35D",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## WB Analytics2 → Google Sheets\\nАвтозаполнение листов «Новинки_ВБ_суперсейл_февраль_26 (копия)» и «Новинки_ВБ_фитсмайл_февраль_26 (копия)». Заполняет строки метрик: 87 (Сумма заказов), 89 (Заказали), 90 (Корзина), 91 (Перешли), 93 (Остаток), 95 (Отзывы), 96 (Вопросы), 97 (Позиция в поиске) для до 20 карточек. Остальные строки блока остаются под формулы и ручной ввод.",
+        "height": 320,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3936,
+        5216
+      ],
+      "id": "fb5c2824-4e91-4d1c-b911-204f2370fc40",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code Dates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code Dates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Dates": {
+      "main": [
+        [
+          {
+            "node": "Sheets Read Cards SuperSale",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sheets Read Cards FitSmile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets Read Cards SuperSale": {
+      "main": [
+        [
+          {
+            "node": "Code Parse Cards SuperSale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets Read Cards FitSmile": {
+      "main": [
+        [
+          {
+            "node": "Code Parse Cards FitSmile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Parse Cards SuperSale": {
+      "main": [
+        [
+          {
+            "node": "Analytics SuperSale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Parse Cards FitSmile": {
+      "main": [
+        [
+          {
+            "node": "Analytics FitSmile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analytics SuperSale": {
+      "main": [
+        [
+          {
+            "node": "Code Feedbacks & Questions SuperSale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analytics FitSmile": {
+      "main": [
+        [
+          {
+            "node": "Code Feedbacks & Questions FitSmile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Feedbacks & Questions SuperSale": {
+      "main": [
+        [
+          {
+            "node": "Stocks SuperSale",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Promo Position SuperSale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Promo Position SuperSale": {
+      "main": [
+        [
+          {
+            "node": "Merge Before Merge SuperSale",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code Feedbacks & Questions FitSmile": {
+      "main": [
+        [
+          {
+            "node": "Stocks FitSmile",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Promo Position FitSmile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stocks SuperSale": {
+      "main": [
+        [
+          {
+            "node": "Merge Before Merge SuperSale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Before Merge SuperSale": {
+      "main": [
+        [
+          {
+            "node": "Code Merge Metrics SuperSale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stocks FitSmile": {
+      "main": [
+        [
+          {
+            "node": "Merge Before Merge FitSmile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Promo Position FitSmile": {
+      "main": [
+        [
+          {
+            "node": "Merge Before Merge FitSmile",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Before Merge FitSmile": {
+      "main": [
+        [
+          {
+            "node": "Code Merge Metrics FitSmile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Merge Metrics SuperSale": {
+      "main": [
+        [
+          {
+            "node": "Merge Metrics Both",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Merge Metrics FitSmile": {
+      "main": [
+        [
+          {
+            "node": "Merge Metrics Both",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Metrics Both": {
+      "main": [
+        [
+          {
+            "node": "Code Prepare Write",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Prepare Write": {
+      "main": [
+        [
+          {
+            "node": "Sheets Write Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "45da05af-9b86-4a90-a67d-98277f93c54e",
+  "meta": {
+    "instanceId": "a828a0adb0ba527bfb8fcd5f07b69548eb0e434824ea992140fc110ca86a7d2b"
+  },
+  "id": "waZxrJ1LTrMerm4Q",
+  "tags": []
+}

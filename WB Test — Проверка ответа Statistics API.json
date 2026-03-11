@@ -1,0 +1,79 @@
+{
+  "name": "WB Test — Проверка ответа Statistics API",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "49d640ca-25fd-49ed-aad3-f7a7527f298b",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Фиксированная дата для теста (или вчера)\nconst dateStr = '2026-02-17';\nconst dateFromRfc = dateStr + 'T00:00:00%2B03:00';\nconst dateToRfc = dateStr + 'T23:59:59%2B03:00';\nreturn [{ json: { date_from_rfc: dateFromRfc, date_to_rfc: dateToRfc, date: dateStr } }];"
+      },
+      "id": "db25622f-0c1a-489f-ba97-ed30ae4986a0",
+      "name": "Code — Дата",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Запрос к WB Statistics API — возвращаем RAW ответ для проверки\n// Замените TOKEN на свой токен категории Статистика\nconst dates = $('Code — Дата').first().json;\nconst TOKEN = 'WB_API_TOKEN_PLACEHOLDER';\nconst url = `https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod?dateFrom=${dates.date_from_rfc}&dateTo=${dates.date_to_rfc}&period=daily&rrdid=0&limit=100000`;\n\ntry {\n  const res = await this.helpers.httpRequest({\n    method: 'GET',\n    url,\n    headers: { Authorization: TOKEN },\n    returnFullResponse: true,\n    ignoreHttpStatusErrors: true\n  });\n  const bodyStr = typeof res.body === 'string' ? res.body : (res.body ? JSON.stringify(res.body) : '');\n  return [{\n    json: {\n      statusCode: res.statusCode,\n      bodyLength: bodyStr.length,\n      bodyPreview: bodyStr.length > 500 ? bodyStr.slice(0, 500) + '...' : bodyStr,\n      bodyEmpty: bodyStr.length === 0,\n      contentType: res.headers?.['content-type'] || '',\n      date: dates.date\n    }\n  }];\n} catch (e) {\n  return [{ json: { error: e.message, date: dates.date } }];\n}"
+      },
+      "id": "93e510e0-cd07-433c-9e8f-533691815bb3",
+      "name": "Code — Запрос и вывод ответа",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code — Дата",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code — Дата": {
+      "main": [
+        [
+          {
+            "node": "Code — Запрос и вывод ответа",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "2f7e1689-4817-4f45-b468-cca77834672d",
+  "meta": {
+    "instanceId": "a828a0adb0ba527bfb8fcd5f07b69548eb0e434824ea992140fc110ca86a7d2b"
+  },
+  "id": "dWnafe5Fl2kr38P0",
+  "tags": []
+}

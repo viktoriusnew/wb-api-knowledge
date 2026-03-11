@@ -1,0 +1,631 @@
+{
+  "name": "WB Analytics → Google Sheets",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d989241d-e608-4a8d-add0-84a0aecd9e9b",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        8864,
+        5792
+      ],
+      "notes": "Для теста: нажмите Execute workflow."
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7,
+              "triggerAtMinute": 5
+            }
+          ]
+        }
+      },
+      "id": "ea6b4a3d-ac89-45f8-a81b-21985f39070c",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        8864,
+        5600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const yesterday = DateTime.now().setZone('Europe/Moscow').minus({ days: 1 });\nconst dateStr = yesterday.toFormat('yyyy-MM-dd');\nconst [year, month, day] = dateStr.split('-').map(Number);\nconst dateFromRfc = `${dateStr}T00:00:00%2B03:00`;\nconst dateToRfc = `${dateStr}T23:59:59%2B03:00`;\nconst pastDate = yesterday.minus({ days: 7 }).toFormat('yyyy-MM-dd');\n\nreturn [{\n  json: {\n    date_from: dateStr,\n    date_to: dateStr,\n    date_from_rfc: dateFromRfc,\n    date_to_rfc: dateToRfc,\n    past_date: pastDate,\n    day,\n    month,\n    year,\n    date_display: yesterday.toFormat('dd.MM')\n  }\n}];"
+      },
+      "id": "d056a7aa-7d02-44d3-aa33-59dadec192f6",
+      "name": "Code Dates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9088,
+        5792
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://seller-analytics-api.wildberries.ru/api/analytics/v3/sales-funnel/products",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "WB_API_TOKEN_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"selectedPeriod\": {\"start\": \"{{ $json.date_from }}\", \"end\": \"{{ $json.date_to }}\"},\n  \"pastPeriod\": {\"start\": \"{{ $json.past_date }}\", \"end\": \"{{ $json.past_date }}\"},\n  \"nmIds\": [],\n  \"brandNames\": [],\n  \"subjectIds\": [],\n  \"tagIds\": [],\n  \"skipDeletedNm\": true,\n  \"orderBy\": {\"field\": \"orderSum\", \"mode\": \"desc\"},\n  \"limit\": 1000,\n  \"offset\": 0\n}",
+        "options": {}
+      },
+      "id": "0711a15f-0941-4774-ac60-79d9d8fe09f4",
+      "name": "Analytics SuperSale",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9344,
+        5248
+      ],
+      "settings": {
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 10000
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://advert-api.wildberries.ru/adv/v1/upd?from={{ $('Code Dates').first().json.date_from }}&to={{ $('Code Dates').first().json.date_to }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "WB_API_TOKEN_PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c731f1d4-e00e-458f-9c51-2ae8b0fb1701",
+      "name": "Advert SuperSale",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9344,
+        5408
+      ],
+      "settings": {
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 10000
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod?dateFrom={{ $('Code Dates').first().json.date_from_rfc }}&dateTo={{ $('Code Dates').first().json.date_to_rfc }}&period=daily&rrdid=0&limit=100000",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "WB_API_TOKEN_PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4ac0734e-4bac-4ac7-a993-ac04360ba276",
+      "name": "Statistics SuperSale",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9344,
+        5552
+      ],
+      "settings": {
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 10000
+      },
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://seller-analytics-api.wildberries.ru/api/analytics/v3/sales-funnel/products",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "WB_API_TOKEN_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"selectedPeriod\": {\"start\": \"{{ $json.date_from }}\", \"end\": \"{{ $json.date_to }}\"},\n  \"pastPeriod\": {\"start\": \"{{ $json.past_date }}\", \"end\": \"{{ $json.past_date }}\"},\n  \"nmIds\": [],\n  \"brandNames\": [],\n  \"subjectIds\": [],\n  \"tagIds\": [],\n  \"skipDeletedNm\": true,\n  \"orderBy\": {\"field\": \"orderSum\", \"mode\": \"desc\"},\n  \"limit\": 1000,\n  \"offset\": 0\n}",
+        "options": {}
+      },
+      "id": "50b5be12-e819-4174-8fe6-dbed90428adc",
+      "name": "Analytics FitSmile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9344,
+        6112
+      ],
+      "settings": {
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 10000
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://advert-api.wildberries.ru/adv/v1/upd?from={{ $('Code Dates').first().json.date_from }}&to={{ $('Code Dates').first().json.date_to }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "WB_API_TOKEN_PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ae9a9f27-f64f-4d83-a3b9-04fc7130d34b",
+      "name": "Advert FitSmile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9344,
+        6256
+      ],
+      "settings": {
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 10000
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://statistics-api.wildberries.ru/api/v5/supplier/reportDetailByPeriod?dateFrom={{ $('Code Dates').first().json.date_from_rfc }}&dateTo={{ $('Code Dates').first().json.date_to_rfc }}&period=daily&rrdid=0&limit=100000",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "WB_API_TOKEN_PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c709f80d-c71e-4ae5-a95e-d603dd74488a",
+      "name": "Statistics FitSmile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9344,
+        6416
+      ],
+      "settings": {
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 10000
+      },
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "9dc4654e-f1fd-49b7-86fb-9e49d42b291e",
+      "name": "Merge SuperSale 1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        9632,
+        5360
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "799f898d-f185-4db9-a187-23ee1ddb88ea",
+      "name": "Merge SuperSale 2",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        9792,
+        5552
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "a425f668-27e4-4ffc-9147-5a4917e2d86a",
+      "name": "Merge FitSmile 1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        9632,
+        6176
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "9354b374-8d80-4d3a-ac30-b6440a0be1f2",
+      "name": "Merge FitSmile 2",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        9808,
+        5968
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "4a627148-e0a4-44b7-80ce-bb284ff07166",
+      "name": "Merge Both",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        10048,
+        5760
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// WB SuperSale + FitSmile — обработка API и расчёт метрик\nconst dates = $('Code Dates').first().json;\n\nfunction processWBCabinet(analytics, advert, statistics) {\n  let orderSum = 0, orderCount = 0, buyoutSum = 0, buyoutCount = 0;\n  let openCount = 0, cartCount = 0;\n  let locWeightedSum = 0, locWeight = 0;\n  let ttrWeightedHours = 0, ttrWeight = 0;\n  \n  const products = analytics?.products || analytics?.data?.products || [];\n  for (const item of products) {\n    const stat = item?.statistic?.selected || item?.statistic?.current || item?.statistic || item;\n    if (!stat) continue;\n    const ordCnt = Number(stat.orderCount) || 0;\n    orderSum += Number(stat.orderSum) || 0;\n    orderCount += ordCnt;\n    buyoutSum += Number(stat.buyoutSum) || 0;\n    buyoutCount += Number(stat.buyoutCount) || 0;\n    openCount += Number(stat.openCount) || 0;\n    cartCount += Number(stat.cartCount) || 0;\n    const loc = Number(stat.localizationPercent);\n    if (!isNaN(loc) && ordCnt > 0) { locWeightedSum += loc * ordCnt; locWeight += ordCnt; }\n    const ttr = stat.timeToReady;\n    if (ttr && ordCnt > 0) {\n      const d = Number(ttr.days) || 0, h = Number(ttr.hours) || 0, m = Number(ttr.mins) || 0;\n      if (h >= 0 && (d > 0 || h > 0 || m > 0)) {\n        const totalHours = d * 24 + h + m / 60;\n        ttrWeightedHours += totalHours * ordCnt;\n        ttrWeight += ordCnt;\n      }\n    }\n  }\n  \n  let rashody_reklama = 0;\n  const advItems = Array.isArray(advert) ? advert : (advert ? [advert] : []);\n  for (const it of advItems) {\n    const obj = it?.json ?? it;\n    if (Array.isArray(obj)) for (const o of obj) rashody_reklama += Number(o?.updSum) || 0;\n    else rashody_reklama += Number(obj?.updSum) || 0;\n  }\n  rashody_reklama = Math.round(rashody_reklama * 100) / 100;\n  \n  let retail_amount = 0, sum_commission = 0, sum_delivery = 0, sum_deduction = 0;\n  let sum_storage = 0, sum_penalty = 0, sum_acceptance = 0;\n  let buyoutCountFromStats = 0, returnCountFromStats = 0;\n  const statItems = Array.isArray(statistics) ? statistics : (statistics ? [statistics] : []);\n  for (const it of statItems) {\n    const r = it?.json ?? it;\n    if (!r) continue;\n    const rows = Array.isArray(r) ? r : [r];\n    for (const row of rows) {\n      const price = Number(row.retail_price_withdisc_rub) || 0;\n      const qty = Number(row.quantity) || 0;\n      const docType = (row.doc_type_name || '').trim();\n      const isSale = docType === 'Продажа';\n      const isReturn = docType === 'Возврат';\n      if (isSale) buyoutCountFromStats += qty;\n      else if (isReturn) returnCountFromStats += qty;\n      const amt = price * qty;\n      if (isSale) retail_amount += amt;\n      else if (isReturn) retail_amount -= amt;\n      sum_commission += amt * (Number(row.commission_percent) || 0) / 100;\n      sum_delivery += Number(row.delivery_rub) || 0;\n      sum_deduction += Number(row.deduction) || 0;\n      sum_storage += Number(row.storage_fee) || 0;\n      sum_penalty += Number(row.penalty) || 0;\n      sum_acceptance += Number(row.acceptance) || 0;\n    }\n  }\n  \n  const avgHours = ttrWeight > 0 ? ttrWeightedHours / ttrWeight : 0;\n  const speed_dostavki = ttrWeight > 0 \n    ? (avgHours >= 24 ? `${Math.floor(avgHours/24)} д ${Math.round(avgHours % 24)} ч` : `${Math.round(avgHours)} ч`)\n    : '';\n  const locPct = locWeight > 0 ? Math.min(100, Math.round(locWeightedSum / locWeight)) : '';\n  \n  const pct = (v, base) => base > 0 ? Math.round((v / base) * 10000) / 100 : 0;\n  const pct_commission = pct(sum_commission, retail_amount);\n  const pct_delivery = pct(sum_delivery, retail_amount);\n  const pct_deduction = pct(sum_deduction, retail_amount);\n  const pct_storage = pct(sum_storage, retail_amount);\n  const pct_penalty = pct(sum_penalty, retail_amount);\n  const pct_acceptance = pct(sum_acceptance, retail_amount);\n  const pct_obshiy = Math.round((pct_commission + pct_delivery + pct_deduction + pct_storage + pct_penalty + pct_acceptance) * 100) / 100;\n  \n  return {\n    date_display: dates.date_display || '',\n    suma_zakazov: orderSum,\n    kolvo_tovarov: orderCount,\n    vykupili_summa: buyoutCountFromStats > 0 ? Math.round(retail_amount * 100) / 100 : buyoutSum,\n    vykupili_tovarov: buyoutCountFromStats > 0 ? Math.max(0, buyoutCountFromStats - returnCountFromStats) : buyoutCount,\n    speed_dostavki: speed_dostavki,\n    localization_percent: locPct,\n    pokazy: openCount,\n    pereshli_v_kartochku: openCount,\n    polozhili_v_korzinu: cartCount,\n    rashody_reklama,\n    pct_obshiy,\n    pct_commission,\n    pct_delivery,\n    pct_deduction,\n    pct_storage,\n    pct_penalty,\n    pct_acceptance\n  };\n}\n\nlet superSALE, fitSmile;\ntry {\n  superSALE = processWBCabinet(\n    $('Analytics SuperSale').first().json,\n    $('Advert SuperSale').all(),\n    $('Statistics SuperSale').all()\n  );\n} catch (e) { superSALE = {}; }\ntry {\n  fitSmile = processWBCabinet(\n    $('Analytics FitSmile').first().json,\n    $('Advert FitSmile').all(),\n    $('Statistics FitSmile').all()\n  );\n} catch (e) { fitSmile = {}; }\n\nreturn [{ json: { superSALE: superSALE || {}, fitSmile: fitSmile || {} } }];"
+      },
+      "id": "77edd151-30b7-4cc3-bc46-560ae74e4952",
+      "name": "Code Merge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10288,
+        5760
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// WB SuperSale (243-270) + FitSmile (274-301). Колонка = день месяца.\nconst merged = $('Code Merge').first().json;\nconst dates = $('Code Dates').first().json;\nconst day = Number(dates.day) || 1;\nconst month = Number(dates.month) || 1;\nconst year = Number(dates.year) || 2026;\nconst monthsRu = ['', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];\nconst sheetName = `${monthsRu[month]}_${String(year).slice(-2)}`;\nfunction colLetter(index) { let letter = ''; let n = index; while (n >= 0) { letter = String.fromCharCode((n % 26) + 65) + letter; n = Math.floor(n / 26) - 1; } return letter; }\nconst col = colLetter(2 + (day - 1));\nconst ss = merged.superSALE || {};\nconst fs = merged.fitSmile || {};\nconst fmt = (v, pct) => v != null && v !== '' ? (pct ? String(v).replace('.', ',') + '%' : v) : '';\nconst pctDecimal = (v) => v != null && v !== '' ? Number(v) / 100 : '';\n\nconst range1a = `'${sheetName}'!${col}243:${col}250`;\nconst values1a = [\n  [ss.suma_zakazov], [ss.kolvo_tovarov], [ss.vykupili_summa], [ss.vykupili_tovarov],\n  [], [],\n  [ss.speed_dostavki], [pctDecimal(ss.localization_percent)]\n];\nconst range1b = `'${sheetName}'!${col}252:${col}253`;\nconst values1b = [\n  [ss.pereshli_v_kartochku], [ss.polozhili_v_korzinu]\n];\nconst range2 = `'${sheetName}'!${col}256:${col}256`;\nconst values2 = [[ss.rashody_reklama]];\nconst range3 = `'${sheetName}'!${col}264:${col}270`;\nconst values3 = [\n  [fmt(ss.pct_obshiy, 1)], [fmt(ss.pct_commission, 1)], [fmt(ss.pct_delivery, 1)],\n  [fmt(ss.pct_deduction, 1)], [fmt(ss.pct_storage, 1)], [fmt(ss.pct_penalty, 1)], [fmt(ss.pct_acceptance, 1)]\n];\nconst range4a = `'${sheetName}'!${col}274:${col}281`;\nconst values4a = [\n  [fs.suma_zakazov], [fs.kolvo_tovarov], [fs.vykupili_summa], [fs.vykupili_tovarov],\n  [], [],\n  [fs.speed_dostavki], [pctDecimal(fs.localization_percent)]\n];\nconst range4b = `'${sheetName}'!${col}283:${col}284`;\nconst values4b = [\n  [fs.pereshli_v_kartochku], [fs.polozhili_v_korzinu]\n];\nconst range5 = `'${sheetName}'!${col}287:${col}287`;\nconst values5 = [[fs.rashody_reklama]];\nconst range6 = `'${sheetName}'!${col}295:${col}301`;\nconst values6 = [\n  [fmt(fs.pct_obshiy, 1)], [fmt(fs.pct_commission, 1)], [fmt(fs.pct_delivery, 1)],\n  [fmt(fs.pct_deduction, 1)], [fmt(fs.pct_storage, 1)], [fmt(fs.pct_penalty, 1)], [fmt(fs.pct_acceptance, 1)]\n];\nconst range0 = `'${sheetName}'!${col}1:${col}1`;\nconst values0 = [[dates.date_display || '']];\n\nreturn [{ json: { range0, values0, range1a, values1a, range1b, values1b, range2, values2, range3, values3, range4a, values4a, range4b, values4b, range5, values5, range6, values6 } }];"
+      },
+      "id": "55ad62aa-1ab4-4706-b85a-794a1f234ab2",
+      "name": "Code Column",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10528,
+        5760
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1pXA81cORHIfhWvWc8GLOfLLlhOlsZF3EuGoUvqZgR90/values:batchUpdate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ valueInputOption: 'USER_ENTERED', data: [{ range: $json.range0, values: $json.values0 }, { range: $json.range1a, values: $json.values1a }, { range: $json.range1b, values: $json.values1b }, { range: $json.range2, values: $json.values2 }, { range: $json.range3, values: $json.values3 }, { range: $json.range4a, values: $json.values4a }, { range: $json.range4b, values: $json.values4b }, { range: $json.range5, values: $json.values5 }, { range: $json.range6, values: $json.values6 }] }) }}",
+        "options": {}
+      },
+      "id": "4f166eba-9c73-4ab0-99a8-cf5e8cf7510f",
+      "name": "Sheets Write Column",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10768,
+        5760
+      ],
+      "settings": {
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 10000
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lKUAphbkTpmjb35D",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## SuperSale (WB)\n**Токены аккаунта 1**\nВставьте свои API-токены в ноды:\n- Analytics SuperSale (Аналитика)\n- Advert SuperSale (Продвижение)\n- Statistics SuperSale (Статистика)",
+        "height": 640,
+        "width": 280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        9264,
+        5072
+      ],
+      "id": "ad4454ca-681b-4ebd-ba23-28e8cd487200",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## FitSmile (WB)\n**Токены аккаунта 2**\nВставьте свои API-токены в ноды:\n- Analytics FitSmile (Аналитика)\n- Advert FitSmile (Продвижение)\n- Statistics FitSmile (Статистика)",
+        "height": 656,
+        "width": 280
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        9264,
+        5920
+      ],
+      "id": "7162258e-39c0-4483-bcdf-98b184d8c301",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Google Sheets (копия таблицы)\nТаблица: 1pXA81cORHIfhWvWc8GLOfLLlhOlsZF3EuGoUvqZgR90\nВыберите свои креды в Sheets Write Column",
+        "height": 344,
+        "width": 320
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        10688,
+        5600
+      ],
+      "id": "ef30322c-48e3-425f-a82c-e8f2289711d4",
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code Dates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code Dates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Dates": {
+      "main": [
+        [
+          {
+            "node": "Analytics SuperSale",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Advert SuperSale",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Statistics SuperSale",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Analytics FitSmile",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Advert FitSmile",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Statistics FitSmile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analytics SuperSale": {
+      "main": [
+        [
+          {
+            "node": "Merge SuperSale 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Advert SuperSale": {
+      "main": [
+        [
+          {
+            "node": "Merge SuperSale 1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge SuperSale 1": {
+      "main": [
+        [
+          {
+            "node": "Merge SuperSale 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Statistics SuperSale": {
+      "main": [
+        [
+          {
+            "node": "Merge SuperSale 2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge SuperSale 2": {
+      "main": [
+        [
+          {
+            "node": "Merge Both",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analytics FitSmile": {
+      "main": [
+        [
+          {
+            "node": "Merge FitSmile 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Advert FitSmile": {
+      "main": [
+        [
+          {
+            "node": "Merge FitSmile 1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge FitSmile 1": {
+      "main": [
+        [
+          {
+            "node": "Merge FitSmile 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Statistics FitSmile": {
+      "main": [
+        [
+          {
+            "node": "Merge FitSmile 2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge FitSmile 2": {
+      "main": [
+        [
+          {
+            "node": "Merge Both",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Both": {
+      "main": [
+        [
+          {
+            "node": "Code Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Merge": {
+      "main": [
+        [
+          {
+            "node": "Code Column",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Column": {
+      "main": [
+        [
+          {
+            "node": "Sheets Write Column",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "48c28292-1029-4c46-9c0a-0bb20dc30ac8",
+  "meta": {
+    "instanceId": "a828a0adb0ba527bfb8fcd5f07b69548eb0e434824ea992140fc110ca86a7d2b"
+  },
+  "id": "t2sob6onvd1pVSg0",
+  "tags": []
+}

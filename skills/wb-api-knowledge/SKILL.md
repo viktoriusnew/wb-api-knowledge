@@ -5,7 +5,7 @@ description: Use this skill when working with the local Wildberries API knowledg
 
 # WB API Knowledge
 
-This skill answers questions from the local Wildberries API knowledge base that is built from the OpenAPI YAML files in this repo.
+This skill answers questions from the local Wildberries API knowledge base that is built from the OpenAPI YAML files in this repo. It also contains a lightweight bridge to local `n8n` workflow patterns when the user is building WB automations.
 
 Repo root for this installation:
 
@@ -20,14 +20,15 @@ Repo root for this installation:
    - Use `--kind documents` when the user is asking about a section instead of a method.
    - Use `--domain <name>` when the request clearly targets `common`, `marketplace`, `analytics`, `statistics`, `finance`, `content`, `communications`, `advert`, `supplies`, `returns`, `documents`, or `prices`.
 3. Open the generated Markdown file in `knowledge/` when you need richer context for a section.
-4. For direct endpoint questions, answer with:
+4. If the user is building an automation in `n8n`, also open `references/n8n-patterns.md` and combine it with the relevant endpoint details from the indexes.
+5. For direct endpoint questions, answer with:
    - HTTP method and path
    - domain and base URL
    - required parameters
    - auth scheme
    - rate-limit hint if present
    - deprecated or sandbox status if present
-5. For ambiguous business questions, start from `documents.jsonl` or the section Markdown, then narrow to specific methods.
+6. For ambiguous business questions, start from `documents.jsonl` or the section Markdown, then narrow to specific methods.
 
 ## Source Priority
 
@@ -39,6 +40,7 @@ Prefer local generated artifacts in this order:
 4. `indexes/domains.jsonl` for domain grouping
 5. `knowledge/*.md` for section-level reading
 6. Raw `*.yaml` only when the generated artifacts are not enough
+7. `references/n8n-patterns.md` only when the user is asking for workflow design or `n8n` implementation shape
 
 ## Interpretation Rules
 
@@ -58,6 +60,7 @@ Prefer local generated artifacts in this order:
 - `indexes/domains.jsonl`
 - `knowledge/`
 - `references/repo-paths.md`
+- `references/n8n-patterns.md`
 
 ## Useful Commands
 
@@ -71,4 +74,5 @@ Prefer local generated artifacts in this order:
 
 - Keep answers concise and integration-oriented.
 - Use Russian by default unless the user asks otherwise.
-- Do not invent n8n or Google Sheets recipes in this skill version unless the user asks for a custom solution outside the skill.
+- When n8n templates exist in the repo, prefer extracting their proven patterns instead of inventing workflow structure from scratch.
+- Never keep real WB tokens inside reusable workflow JSON or examples; use placeholders or credentials.
