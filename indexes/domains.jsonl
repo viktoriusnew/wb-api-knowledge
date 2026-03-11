@@ -1,0 +1,13 @@
+{"domain": "advert", "method_count": 28, "base_urls": ["https://advert-api.wildberries.ru"], "documents": ["promotion"]}
+{"domain": "analytics", "method_count": 38, "base_urls": ["https://seller-analytics-api.wildberries.ru"], "documents": ["analytics", "reports"]}
+{"domain": "common", "method_count": 12, "base_urls": ["https://common-api.wildberries.ru", "https://user-management-api.wildberries.ru"], "documents": ["general", "tariffs"]}
+{"domain": "communications", "method_count": 23, "base_urls": ["https://buyer-chat-api.wildberries.ru", "https://feedbacks-api.wildberries.ru"], "documents": ["communications"]}
+{"domain": "content", "method_count": 28, "base_urls": ["https://content-api.wildberries.ru"], "documents": ["products"]}
+{"domain": "documents", "method_count": 4, "base_urls": ["https://documents-api.wildberries.ru"], "documents": ["finances"]}
+{"domain": "finance", "method_count": 1, "base_urls": ["https://finance-api.wildberries.ru"], "documents": ["finances"]}
+{"domain": "marketplace", "method_count": 119, "base_urls": ["https://marketplace-api.wildberries.ru"], "documents": ["in-store-pickup", "orders-dbs", "orders-dbw", "orders-fbs", "products"]}
+{"domain": "prices", "method_count": 11, "base_urls": ["https://discounts-prices-api.wildberries.ru"], "documents": ["products"]}
+{"domain": "promotion", "method_count": 8, "base_urls": ["https://advert-media-api.wildberries.ru", "https://dp-calendar-api.wildberries.ru"], "documents": ["promotion"]}
+{"domain": "returns", "method_count": 2, "base_urls": ["https://returns-api.wildberries.ru"], "documents": ["communications"]}
+{"domain": "statistics", "method_count": 5, "base_urls": ["https://statistics-api.wildberries.ru"], "documents": ["finances", "reports"]}
+{"domain": "supplies", "method_count": 7, "base_urls": ["https://supplies-api.wildberries.ru"], "documents": ["orders-fbw"]}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "WB API Knowledge"
+  short_description: "Search the local Wildberries API knowledge base."
+  default_prompt: "Use $wb-api-knowledge to answer questions from the local Wildberries API knowledge base."
