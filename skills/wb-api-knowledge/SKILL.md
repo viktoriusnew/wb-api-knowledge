@@ -5,30 +5,28 @@ description: Use this skill when working with the local Wildberries API knowledg
 
 # WB API Knowledge
 
-This skill answers questions from the local Wildberries API knowledge base that is built from the OpenAPI YAML files in this repo. It also contains a lightweight bridge to local `n8n` workflow patterns when the user is building WB automations.
+This skill answers questions from the bundled Wildberries API knowledge base stored inside the skill itself. It also contains a lightweight bridge to local `n8n` workflow patterns when the user is building WB automations.
 
-Repo root for this installation:
+Skill root for this installation:
 
-- `C:\Users\viktor\Documents\projects\WB API`
+- `C:\Users\viktor\.codex\skills\wb-api-knowledge`
 
 ## Workflow
 
-1. Rebuild the local indexes if they are missing or stale:
-   - `python -m automation.build_knowledge_base`
-2. Search the local index first:
-   - `python -m automation.search_knowledge "<query>"`
+1. Search the bundled index first:
+   - `python scripts/search_knowledge.py "<query>"`
    - Use `--kind documents` when the user is asking about a section instead of a method.
    - Use `--domain <name>` when the request clearly targets `common`, `marketplace`, `analytics`, `statistics`, `finance`, `content`, `communications`, `advert`, `supplies`, `returns`, `documents`, or `prices`.
-3. Open the generated Markdown file in `knowledge/` when you need richer context for a section.
-4. If the user is building an automation in `n8n`, also open `references/n8n-patterns.md` and combine it with the relevant endpoint details from the indexes.
-5. For direct endpoint questions, answer with:
+2. Open the bundled Markdown file in `knowledge/` when you need richer context for a section.
+3. If the user is building an automation in `n8n`, also open `references/n8n-patterns.md` and combine it with the relevant endpoint details from the indexes.
+4. For direct endpoint questions, answer with:
    - HTTP method and path
    - domain and base URL
    - required parameters
    - auth scheme
    - rate-limit hint if present
    - deprecated or sandbox status if present
-6. For ambiguous business questions, start from `documents.jsonl` or the section Markdown, then narrow to specific methods.
+5. For ambiguous business questions, start from `documents.jsonl` or the section Markdown, then narrow to specific methods.
 
 ## Source Priority
 
@@ -44,7 +42,7 @@ Prefer local generated artifacts in this order:
 
 ## Interpretation Rules
 
-- Treat the OpenAPI YAML files in this repo as the canonical source.
+- Treat the bundled indexes and Markdown documents as the canonical source for this installed skill snapshot.
 - Prefer path, `operationId`, and tag matches over fuzzy business-language matches.
 - If multiple domains look plausible, call that out explicitly and list the strongest candidates.
 - When a method is `deprecated`, mention that directly in the answer.
@@ -59,16 +57,15 @@ Prefer local generated artifacts in this order:
 - `indexes/auth.jsonl`
 - `indexes/domains.jsonl`
 - `knowledge/`
+- `scripts/search_knowledge.py`
 - `references/repo-paths.md`
 - `references/n8n-patterns.md`
 
 ## Useful Commands
 
-- `python -m automation.build_knowledge_base`
-- `python -m automation.search_knowledge "ping"`
-- `python -m automation.search_knowledge "остатки" --kind documents`
-- `python -m automation.search_knowledge "/api/v1/account/balance" --domain finance`
-- `python -m unittest discover -s tests -v`
+- `python scripts/search_knowledge.py "ping"`
+- `python scripts/search_knowledge.py "остатки" --kind documents`
+- `python scripts/search_knowledge.py "/api/v1/account/balance" --domain finance`
 
 ## Notes
 
@@ -76,3 +73,4 @@ Prefer local generated artifacts in this order:
 - Use Russian by default unless the user asks otherwise.
 - When n8n templates exist in the repo, prefer extracting their proven patterns instead of inventing workflow structure from scratch.
 - Never keep real WB tokens inside reusable workflow JSON or examples; use placeholders or credentials.
+- This installed skill is intentionally self-contained so it can work even if the original project folder is removed.
